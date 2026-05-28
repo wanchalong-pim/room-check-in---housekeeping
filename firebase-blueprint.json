@@ -1,0 +1,43 @@
+{
+  "entities": {
+    "Room": {
+      "title": "Room",
+      "description": "Represents a hotel room and its current status.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique identifier for the room." },
+        "name": { "type": "string", "description": "Display name of the room." },
+        "status": {
+          "type": "string",
+          "enum": ["available", "occupied", "dirty"],
+          "description": "Current state: available (ready), occupied (guest inside), dirty (needs cleaning)."
+        },
+        "lastGuestName": { "type": "string", "description": "Name of the last guest." },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Last time the status changed." }
+      },
+      "required": ["id", "name", "status", "updatedAt"]
+    },
+    "ActivityLog": {
+      "title": "Activity Log",
+      "description": "History of check-ins and check-outs.",
+      "type": "object",
+      "properties": {
+        "roomId": { "type": "string", "description": "ID of the room." },
+        "type": { "type": "string", "enum": ["check-in", "check-out", "cleaned"], "description": "Event type." },
+        "guestName": { "type": "string", "description": "Guest name for check-in." },
+        "timestamp": { "type": "string", "format": "date-time", "description": "When the event occurred." }
+      },
+      "required": ["roomId", "type", "timestamp"]
+    }
+  },
+  "firestore": {
+    "/rooms/{roomId}": {
+      "schema": "Room",
+      "description": "Collection of rooms."
+    },
+    "/logs/{logId}": {
+      "schema": "ActivityLog",
+      "description": "Historical logs of room activities."
+    }
+  }
+}

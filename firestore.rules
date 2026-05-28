@@ -1,0 +1,79 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // --- Rooms Collection ---
+    match /rooms/{roomId} {
+      allow read: if true; // Public can see room status
+      
+      function isValidRoom(data) {
+        return data.keys().hasAll(['id', 'name', 'status', 'updatedAt']) &&
+               data.keys().size() <= 6 &&
+               data.id is string && data.id.size() <= 64 &&
+               data.name is string && data.name.size() <= 32 &&
+               data.status in ['available', 'occupied', 'dirty'] &&
+               data.updatedAt == request.time &&
+               (!data.keys().hasAny(['alertsActive']) || data.alertsActive is bool);
+      }
+
+      allow create: if isValidRoom(incoming()); // Allow initial setup if data is valid
+      allow delete: if true; // Allow clearing for setup
+      
+      allow update: if isValidId(roomId) && isValidRoom(incoming()) && (
+        // Action: Guest Check-in (available -> occupied)
+        (existing().status == 'available' && incoming().status == 'occupied' && 
+         incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt', 'lastGuestName', 'alertsActive'])) ||
+        
+        // Action: Guest Check-out (occupied -> dirty)
+        (existing().status == 'occupied' && incoming().status == 'dirty' && 
+         incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt', 'alertsActive'])) ||
+          
+        // Action: Housekeeping Acknowledge Alert (dirty -> dirty)
+        (existing().status == 'dirty' && incoming().status == 'dirty' && 
+         incoming().diff(existing()).affectedKeys().hasOnly(['alertsActive', 'updatedAt'])) ||
+
+        // Action: Housekeeping Cleaned (dirty -> available)
+        (existing().status == 'dirty' && incoming().status == 'available' && 
+         incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt', 'alertsActive']))
+      );
+    }
+
+    // --- Logs Collection ---
+    match /logs/{logId} {
+      allow read: if true; // Demo purposes, allow viewing logs
+      
+      function isValidLog(data) {
+        return data.keys().hasAll(['roomId', 'type', 'timestamp']) &&
+               data.roomId is string && data.roomId.size() <= 64 &&
+               data.type in ['check-in', 'check-out', 'cleaned'] &&
+               (data.timestamp == request.time || data.timestamp == null); // Allow null for simpler batch delete if needed, but usually we just allow delete
+      }
+
+      allow create: if isValidLog(incoming());
+      allow update: if false;
+      allow delete: if true; // Allow clearing for setup
+    }
+  }
+}

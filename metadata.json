@@ -1,0 +1,6 @@
+{
+  "name": "Room Check-In & Housekeeping System",
+  "description": "A comprehensive system for self-check-in/out via QR codes, real-time housekeeping status updates, and room management for 10 rooms.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
