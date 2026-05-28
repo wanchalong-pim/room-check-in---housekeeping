@@ -1056,6 +1056,8 @@ clearAllBtn.addEventListener('click', async () => {
 });
 
 // --- Start the App on window load ---
-window.addEventListener('DOMContentLoaded', () => {
+if (document.readyState === 'loading') {
+  window.addEventListener('DOMContentLoaded', initFirebase);
+} else {
   initFirebase();
-});
+}
